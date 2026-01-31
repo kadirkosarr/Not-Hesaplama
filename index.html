@@ -6,39 +6,38 @@
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; justify-content: center; padding-top: 30px; background-color: #eef2f3; }
         .container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 400px; }
-        h2 { text-align: center; color: #333; margin-bottom: 20px; }
+        h2 { text-align: center; color: #333; margin-bottom: 25px; }
         label { font-size: 14px; color: #666; font-weight: bold; }
         input { width: 100%; padding: 12px; margin: 8px 0 15px 0; box-sizing: border-box; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; }
+        
+        /* Okları geri getirdik */
+        input[type="number"] { -webkit-appearance: number-input; -moz-appearance: number-input; appearance: number-input; }
+
         button { width: 100%; padding: 12px; background-color: #007bff; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; margin-bottom: 10px; }
         button:hover { background-color: #0056b3; }
         #sonuc { margin-top: 20px; padding: 15px; border-radius: 6px; text-align: center; font-size: 18px; display: none; }
         .gecer { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
         .kalir { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-        .baraj-uyari { color: #dc3545; font-size: 13px; margin-top: -10px; margin-bottom: 10px; display: block; font-weight: bold; }
         
         .hedef-liste { margin-top: 25px; border-top: 2px solid #eee; padding-top: 15px; }
         .hedef-liste h3 { font-size: 16px; color: #444; text-align: center; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
         th, td { border: 1px solid #eee; padding: 8px; text-align: center; }
         th { background-color: #f8f9fa; }
-        .impossible { color: #ccc; font-style: italic; }
-        .easy { color: #28a745; font-weight: bold; }
-        .warning { color: #e67e22; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <h2>KTÜ Not Sistemi</h2>
-    <label>Vize Notu (%40):</label>
-    <input type="number" id="vize" min="0" max="100" placeholder="Vize notu..." oninput="hedefleriGoster()">
-    
-    <span class="baraj-uyari">⚠️ Final Barajı: 35</span>
 
-    <label>Final Notu (%60):</label>
-    <input type="number" id="final" min="0" max="100" placeholder="Final notu...">
+    <label>Vize Notu (%40):</label>
+    <input type="number" id="vize" min="0" max="100" placeholder="Vizenizi girin..." oninput="hedefleriGoster()">
     
-    <button onclick="hesapla()">Hesapla</button>
+    <label>Final Notu (%60):</label>
+    <input type="number" id="final" min="0" max="100" placeholder="Finalinizi girin...">
+    
+    <button onclick="hesapla()">Ortalamayı Gör</button>
 
     <div id="sonuc"></div>
 
@@ -48,7 +47,7 @@
             <thead>
                 <tr>
                     <th>Hedef Harf</th>
-                    <th>Min. Final</th>
+                    <th>Gereken Final</th>
                 </tr>
             </thead>
             <tbody id="hedefGövde"></tbody>
@@ -57,13 +56,26 @@
 </div>
 
 <script>
+    // Scroll (Fare Tekerleği) ile Sayı Değiştirme
+    document.querySelectorAll('input[type="number"]').forEach(input => {
+        input.addEventListener('wheel', function(e) {
+            e.preventDefault();
+            let step = 1;
+            let val = parseFloat(this.value) || 0;
+            if (e.deltaY < 0) {
+                if (val < 100) this.value = val + step;
+            } else {
+                if (val > 0) this.value = val - step;
+            }
+            // Değer değişince tablodaki hedefleri güncelle
+            if (this.id === 'vize') hedefleriGoster();
+        }, { passive: false });
+    });
+
     const esikler = [
-        { harf: "AA", min: 82 },
-        { harf: "BA", min: 74 },
-        { harf: "BB", min: 65 },
-        { harf: "CB", min: 58 },
-        { harf: "CC", min: 50 },
-        { harf: "DC", min: 40 }
+        { harf: "AA", min: 82 }, { harf: "BA", min: 74 },
+        { harf: "BB", min: 65 }, { harf: "CB", min: 58 },
+        { harf: "CC", min: 50 }, { harf: "DC", min: 40 }
     ];
 
     function hedefleriGoster() {
@@ -81,20 +93,9 @@
 
         esikler.forEach(esik => {
             let gerekenFinal = (esik.min - (vize * 0.4)) / 0.6;
-            let finalYazi = "";
-
-            if (gerekenFinal > 100) {
-                finalYazi = "<span class='impossible'>İmkanız (100+)</span>";
-            } else {
-                // Eğer gereken final 35'in altındaysa, baraj nedeniyle 35 almalı
-                let gosterilecekFinal = Math.max(35, gerekenFinal).toFixed(1);
-                
-                if (gerekenFinal < 35) {
-                    finalYazi = `<span class='warning'>${gosterilecekFinal} (Baraj!)</span>`;
-                } else {
-                    finalYazi = `<strong>${gosterilecekFinal}</strong>`;
-                }
-            }
+            let finalYazi = `<strong>${Math.max(35, gerekenFinal).toFixed(1)}</strong>`;
+            
+            if (gerekenFinal > 100) finalYazi = "<i style='color:#bdc3c7'>İmkansız</i>";
 
             hedefGövde.innerHTML += `<tr><td>${esik.harf} (${esik.min})</td><td>${finalYazi}</td></tr>`;
         });
@@ -108,21 +109,15 @@
         if(isNaN(vize) || isNaN(final)) {
             sonucDiv.style.display = "block";
             sonucDiv.className = "kalir";
-            sonucDiv.innerHTML = "Lütfen notları girin.";
+            sonucDiv.innerText = "Lütfen notları girin.";
             return;
         }
 
         const ortalama = (vize * 0.4) + (final * 0.6);
         let harf = "FF";
         let durum = "KALIR";
-        let barajMesaj = "";
 
-        // Final Barajı Kontrolü
-        if (final < 35) {
-            harf = "FF";
-            durum = "KALDI (BARAJ)";
-            barajMesaj = "<br><small style='color:red'>Final 35 altı olduğu için kalındı.</small>";
-        } else {
+        if (final >= 35) {
             if (ortalama >= 82) { harf = "AA"; durum = "GEÇER"; }
             else if (ortalama >= 74) { harf = "BA"; durum = "GEÇER"; }
             else if (ortalama >= 65) { harf = "BB"; durum = "GEÇER"; }
@@ -133,7 +128,7 @@
 
         sonucDiv.style.display = "block";
         sonucDiv.className = (durum === "GEÇER") ? "gecer" : "kalir";
-        sonucDiv.innerHTML = `Ortalama: <strong>${ortalama.toFixed(2)}</strong><br>Harf: <strong>${harf}</strong>${barajMesaj}`;
+        sonucDiv.innerHTML = `Ortalama: <strong>${ortalama.toFixed(2)}</strong><br>Harf: <strong>${harf}</strong><br>Durum: ${durum}`;
     }
 </script>
 
